@@ -1,32 +1,64 @@
 # Transcript Summarizer
 
-Extracts key sentences from `.txt` transcript files and generates concise bullet-point notes using extractive summarization (no external APIs or ML libraries).
+Generates study notes (and optional quizzes) from `.txt` transcript files using extractive summarization + optional Groq LLM polishing.
 
-## Requirements
+## Setup
 
-- Python 3.7+
-- No external dependencies (stdlib only)
+```bash
+pip install -r requirements.txt
+```
+
+For LLM features, create a `.env` file (or set env var):
+
+```bash
+cp .env.example .env
+# Edit .env and add your Groq API key
+# Get one free at https://console.groq.com/keys
+```
 
 ## Usage
 
 ```bash
-python transcript_summarizer.py <path_to_transcript_folder>
+# Basic (with LLM polishing)
+python transcript_summarizer.py <transcript_folder>
+
+# Without LLM (fully offline, extractive only)
+python transcript_summarizer.py <transcript_folder> --no-llm
+
+# Custom output file and ratio
+python transcript_summarizer.py transcripts -o my_notes.md -r 0.3
+
+# Generate quiz
+python transcript_summarizer.py transcripts --quiz
+
+# Verbose logging
+python transcript_summarizer.py transcripts -v
 ```
 
-### Example
+## CLI Flags
 
-```bash
-python transcript_summarizer.py transcripts
-```
-
-## Output
-
-Saves summarized notes to `summary_notes.txt` in the current directory.
+| Flag | Default | Description |
+|---|---|---|
+| `input` (positional) | — | Folder with `.txt` transcripts |
+| `-o, --output` | `summary_notes.md` | Output file path |
+| `-r, --ratio` | `0.25` | Fraction of sentences to extract |
+| `--quiz` | off | Generate quiz → `quiz.md` |
+| `--no-llm` | off | Skip Groq, pure extractive output |
+| `-v, --verbose` | off | Debug-level logging |
 
 ## How It Works
 
-1. Reads all `.txt` files from the given folder
-2. Cleans text (removes timestamps, extra whitespace)
-3. Splits into sentences and removes near-duplicates
-4. Scores sentences by word frequency
-5. Selects top 25% as summary notes
+1. Reads all `.txt` files from input folder
+2. Cleans text (timestamps, annotations, whitespace)
+3. Splits into sentences (abbreviation-aware)
+4. Removes near-duplicates (Jaccard similarity)
+5. Scores sentences with TF-IDF
+6. Extracts top sentences (default 25%)
+7. *(Optional)* Sends condensed text to Groq LLM for structured notes
+8. *(Optional)* Generates quiz questions via LLM
+
+## Tests
+
+```bash
+python -m unittest test_transcript_summarizer.py -v
+```
